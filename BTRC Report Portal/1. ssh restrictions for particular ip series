@@ -1,0 +1,47 @@
+To restrict SSH access to port 8822 from only specific IP ranges (192.168.10.0/24 and 192.168.30.0/24)
+and disable access from all other sources:
+
+Prerequisite: need to change the port from 22 to 8822 using below file
+1. ssh configuration and default port change
+
+Then:
+1. vi /etc/ssh/sshd_config
+
+# Global settings
+#Port 22
+Port 8822
+#AddressFamily any
+#ListenAddress 0.0.0.0
+#ListenAddress ::
+
+# Subsystem configuration should be outside Match blocks
+Subsystem sftp /usr/libexec/openssh/sftp-server
+
+# Match block for IP address restrictions
+Match Address 192.168.10.0/24,192.168.30.0/24
+    AllowUsers itbl
+
+
+
+
+
+2. FW:
+sudo firewall-cmd --permanent --remove-service=ssh
+sudo firewall-cmd --permanent --remove-port=22/tcp
+sudo firewall-cmd --permanent --remove-port=8822/tcp
+
+sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="192.168.10.0/24" port protocol="tcp" port="8822" accept'
+sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="192.168.30.0/24" port protocol="tcp" port="8822" accept'
+sudo firewall-cmd --reload
+
+3.
+sudo systemctl restart sshd
+
+4. 
+sudo systemctl status sshd
+
+5.
+sudo firewall-cmd --list-all
+
+Test:
+ssh -p 8822 itbl@192.168.10.144

@@ -1,0 +1,40 @@
+Also, please send me query for:
+1. INSERT new user
+2. Get all user
+3. Get user by id/email
+4. Update user data by id/email
+5. Delete user by id/email
+
+
+
+1. INSERT New User:
+INSERT INTO users_tbl (name, password, email, phone, address, role, photo, status, page_access)
+VALUES ('Obaydul Islam', '12345678', 'obaydul@infotelebd.com', '019990972222', '9 Mohakhali, C/A', 'admin', '/home/obaydul_photo.jpg', 'active', '{"home", "profile"}');
+
+2. Get All Users
+SELECT * FROM users_tbl;
+
+3. Get User by ID:
+SELECT * FROM users_tbl WHERE user_id = 1;
+
+Get User by Email:
+SELECT * FROM users_tbl WHERE email = 'obaydul@infotelebd.com';
+
+
+4. Update User Data by ID
+UPDATE users_tbl
+SET name = 'Md. Obaydul Islam', password = 'abc.123', email = 'obaydul@infotelebd.com', phone = '019990972222', address = 'Infozillion. 9 Mohakhali, C/A', role = 'admin', photo = '/home/obaydul_photo.jpg', status = 'inactive', page_access = '{"settings", "dashboard"}'
+WHERE user_id = 1;
+
+
+Update User Data by Email
+UPDATE users_tbl
+SET name = 'Md. Obaydul Islam', password = 'abc.123', email = 'obaydul@infotelebd.com', phone = '019990972222', address = 'Infozillion. 9 Mohakhali, C/A', role = 'admin', photo = '/home/obaydul_photo.jpg', status = 'inactive', page_access = '{"settings", "dashboard"}'
+WHERE email = 'obaydul@infotelebd.com';
+
+
+5. Delete User by ID
+DELETE FROM users_tbl WHERE user_id = 1;
+
+Delete User by Email
+DELETE FROM users_tbl WHERE email = 'obaydul@infotelebd.com';

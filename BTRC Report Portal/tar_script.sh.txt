@@ -1,0 +1,15 @@
+infozillion_obaydul@cdr-scanning-and-reporting:~/tar_files_by_obaydul$ cat tar_script.sh
+#!/bin/bash
+# This script will compress all csv files from /root/transactional_all_cdr/ to /root/tar_files_by_obaydul/transactional_all_cdr/
+# This script is developed by obaydul- Infozillion on 6-June-2023
+
+directory="/root/transactional_all_cdr/"
+output_directory="/root/tar_files_by_obaydul/transactional_all_cdr/"
+
+cd "$directory" || exit
+
+for file in *.csv; do
+    if [ -f "$file" ]; then
+        tar -czvf "$output_directory/$file.tar.gz" "$file"
+    fi
+done

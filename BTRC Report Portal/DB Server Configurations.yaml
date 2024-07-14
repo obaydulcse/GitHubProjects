@@ -1,0 +1,358 @@
+sudo dnf update -y
+
+PostgreSQL installations:
+sudo dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+sudo dnf -qy module disable postgresql
+sudo dnf install -y postgresql16-server
+sudo /usr/pgsql-16/bin/postgresql-16-setup initdb
+sudo systemctl enable postgresql-16
+sudo systemctl start postgresql-16
+
+
+For RHEL / Rocky Linux / AlmaLinux / CentOS / SL / OL 7, 8, 9 Or Fedora 39 And Later Derived Distributions:
+    postgresql-setup --initdb
+    systemctl enable postgresql.service
+    systemctl start postgresql.service
+
+Configure Firewalld:
+sudo dnf install -y firewalld
+sudo systemctl start firewalld
+sudo systemctl enable firewalld
+sudo firewall-cmd --permanent --add-service=ssh
+sudo firewall-cmd --permanent --add-service=postgresql
+sudo firewall-cmd --reload
+
+services are currently enabled:
+systemctl list-unit-files --type=service --state=enabled
+
+Disable Unused Services:
+sudo systemctl disable avahi-daemon --now
+sudo systemctl disable cups --now
+sudo systemctl disable postfix --now
+
+which services are not required for postgresql server, please disable
+
+Secure SSH Access:
+sudo vim /etc/ssh/sshd_config
+
+# Add/modify the following lines
+PermitRootLogin no
+PasswordAuthentication no
+
+Port 9922 // how to change the port
+#AddressFamily any
+ListenAddress 192.168.10.0/24
+#ListenAddress ::
+
+
+# Save and exit (Ctrl+X, then Y, then Enter)
+
+sudo systemctl restart sshd
+
+Install and Configure Fail2Ban:
+sudo dnf install epel-release -y
+sudo dnf install -y fail2ban
+sudo head /etc/fail2ban/jail.local
+
+sudo cp /etc/fail2ban/jail.{conf,local}
+or
+sudo cp jail.conf jail.local
+
+sudo vi jail.local
+# Add the following content
+ 276 [sshd]
+    277
+    278 # To use more aggressive sshd modes set filter parameter "mode" in jail.local:
+    279 # normal (default), ddos, extra or aggressive (combines all).
+    280 # See "tests/files/logs/sshd" or "filter.d/sshd.conf" for usage example and details.
+    281 #mode   = normal
+    282 port    = ssh
+    283 logpath = %(sshd_log)s
+    284 backend = %(sshd_backend)s
+    285 enabled = true
+    286 filter = sshd
+    287 #logpath = /var/log/auth.log
+    288 maxretry = 3
+    289 bantime = 3600
+
+# Save and exit (Ctrl+X, then Y, then Enter)
+
+sudo systemctl stop fail2ban
+sudo systemctl start fail2ban
+sudo systemctl enable fail2ban
+
+for email setting of fail2ban:
+# Some options used for actions
+
+# Destination email address used solely for the interpolations in
+# jail.{conf,local,d/*} configuration files.
+destemail = root@localhost
+
+# Sender email address used solely for some actions
+sender = root@<fq-hostname>
+
+# E-mail action. Since 0.8.1 Fail2Ban uses sendmail MTA for the
+# mailing. Change mta configuration parameter to mail if you want to
+# revert to conventional 'mail'.
+mta = sendmail
+
+Testing of fail2ban:
+sudo fail2ban-client status
+[root@dbServer fail2ban]# sudo zgrep 'Ban' /var/log/fail2ban.log*
+2024-06-26 17:16:42,521 fail2ban.actions        [55866]: NOTICE  [sshd] Ban 192.168.10.76
+
+
+Secure PostgreSQL Configuration:
+vi /var/lib/pgsql/16/data/postgresql.conf
+
+# Add/modify the following lines
+listen_addresses = 'localhost'
+password_encryption = scram-sha-256
+
+# Save and exit (Ctrl+X, then Y, then Enter)
+
+
+vi /var/lib/pgsql/16/data/pg_hba.conf
+
+# Add/modify the following lines
+host    all             all             127.0.0.1/32            scram-sha-256
+host    all             all             ::1/128                 scram-sha-256
+
+# Save and exit (Ctrl+X, then Y, then Enter)
+
+sudo systemctl reload postgresql-16
+
+
+
+Enforce Strong Postgres Passwords:
+sudo -i -u postgres
+psql
+
+# Inside the psql shell, run:
+ALTER USER postgres WITH PASSWORD 'My strong password for 2024';
+
+# Exit the psql shell
+\q
+exit
+
+
+Set Up Regular Backups:
+sudo nano /usr/local/bin/pg_backup.sh
+
+# Add the following content
+#!/bin/bash
+BACKUP_DIR="/path/to/backup"
+mkdir -p ${BACKUP_DIR}
+sudo -u postgres pg_dumpall > ${BACKUP_DIR}/pg_backup_$(date +%Y%m%d%H%M%S).sql
+
+# Save and exit (Ctrl+X, then Y, then Enter)
+
+# Make the script executable
+sudo chmod +x /usr/local/bin/pg_backup.sh
+
+
+Automatic backup script:
+
+sudo crontab -e
+
+# Add the following line to run the backup script daily at 2 AM
+0 2 * * * /usr/local/bin/pg_backup.sh
+
+# Save and exit (Ctrl+X, then Y, then Enter)
+
+
+Monitor and Audit Logs:
+sudo ls /var/lib/pgsql/16/data/log/
+
+
+Enable SELinux:
+sestatus
+
+# If not enforcing, set it to enforcing
+sudo setenforce 1
+
+# Ensure it remains enforcing after reboot
+sudo nano /etc/selinux/config
+
+# Change the line
+SELINUX=enforcing
+
+# Save and exit (Ctrl+X, then Y, then Enter)
+
+
+Install Anti-Malware Tools:
+sudo dnf install -y clamav clamav-update
+sudo freshclam
+sudo systemctl start clamav-freshclam
+sudo systemctl enable clamav-freshclam
+
+
+Limit Access to PostgreSQL:
+sudo vi /var/lib/pgsql/16/data/pg_hba.conf
+
+# Add the following line (replace <trusted_ip_address> with the actual IP)
+host    all             all             <trusted_ip_address>/32    scram-sha-256
+
+# Save and exit (Ctrl+X, then Y, then Enter)
+
+sudo systemctl reload postgresql-16
+
+
+
+Use Strong Encryption for Data in Transit:
+Enable SSL in postgresql.conf:
+sudo nano /var/lib/pgsql/15/data/postgresql.conf
+
+# Add/modify the following lines
+ssl = on
+ssl_cert_file = '/path/to/server.crt'
+ssl_key_file = '/path/to/server.key'
+
+# Save and exit (Ctrl+X, then Y, then Enter)
+
+sudo systemctl reload postgresql-16
+
+
+
+createdb cp_report:
+sudo -i -u postgres
+createdb cp_report
+
+[root@dbServer ~]# sudo -i -u postgres
+[postgres@dbServer ~]$ psql -d cp_report
+cp_report=# \l
+                                                       List of databases
+   Name    |  Owner   | Encoding | Locale Provider |   Collate   |    Ctype    | ICU Locale | ICU Rules |   Access privileges
+-----------+----------+----------+-----------------+-------------+-------------+------------+-----------+-----------------------
+ cp_report | postgres | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |            |           |
+ postgres  | postgres | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |            |           |
+ template0 | postgres | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |            |           | =c/postgres          +
+           |          |          |                 |             |             |            |           | postgres=CTc/postgres
+ template1 | postgres | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |            |           | =c/postgres          +
+           |          |          |                 |             |             |            |           | postgres=CTc/postgres
+(4 rows)
+
+
+psql
+
+# Inside the psql shell, run:
+CREATE USER cp_user WITH PASSWORD 'cp_user_strong_password4BTRC';
+
+# Grant all privileges on the database to the new user:
+GRANT ALL PRIVILEGES ON DATABASE cp_report TO cp_user;
+
+# Exit the psql shell
+\q
+
+Configure PostgreSQL to Allow Remote Connections:
+[root@dbServer ~]# vi /var/lib/pgsql/16/data/postgresql.conf
+
+# Find and modify the listen_addresses line to:
+listen_addresses = '*'
+# Save and exit (Ctrl+X, then Y, then Enter)
+
+vi  /var/lib/pgsql/15/data/pg_hba.conf
+
+# Add the following line to allow connections from trusted IP addresses:
+host    cp_report    cp_user    <trusted_ip_address>/32    scram-sha-256
+
+# Replace <trusted_ip_address> with the actual IP address you want to allow access from
+
+# Save and exit (Ctrl+X, then Y, then Enter)
+sudo systemctl restart postgresql-16
+
+Verify the Database and User:
+sudo -i -u postgres
+psql -d cp_report -U cp_user -W
+
+# Enter the password when prompted
+
+# Inside the psql shell, run:
+\l    # List all databases
+\du   # List all users
+
+# You should see cp_report in the list of databases and cp_user in the list of users
+
+# Exit the psql shell
+\q
+
+
+
+
+=============
+Mail server firewall
+==================
+[root@mail fail2ban]# firewall-cmd --list-all
+public (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: ens224
+  sources:
+  services: dhcpv6-client http https imap imaps pop3 pop3s smtp smtps
+  ports: 8443/tcp 5222/tcp 5223/tcp 587/tcp
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
+        rule family="ipv4" source address="182.163.102.80/29" port port="7071" protocol="tcp" accept
+
+
+
+
+os user:postgres/cp_user
+DB user: cp_user/cp_user
+DB name: cp_report
+
+sudo -i -u postgres
+ALTER USER cp_user WITH PASSWORD 'cp_user_strong_password4BTRC';
+psql -d cp_report -U cp_user -W
+
+
+GRANT ALL PRIVILEGES ON SCHEMA public TO cp_user;
+ALTER USER cp_user WITH CREATEDB;
+GRANT ALL PRIVILEGES ON DATABASE cp_report TO cp_user;
+GRANT ALL PRIVILEGES ON SCHEMA public TO cp_user;
+\q
+
+
+CREATE TABLE users_tbl (
+    user_id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(255) UNIQUE NOT NULL,
+    address TEXT,
+    role VARCHAR(50) NOT NULL,
+    photo TEXT,
+    status VARCHAR(50),
+    page_access TEXT[], -- PostgreSQL supports array types
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER USER postgres WITH PASSWORD 'cp_user_strong_password4BTRC';
+psql -d cp_report -U postgres -W
+
+
+CREATE TABLE dashboard_tbl (
+    date TIMESTAMP NOT NULL,
+    clientId VARCHAR(255) NOT NULL,
+    ansName VARCHAR(255) NOT NULL,
+    dippingCount INTEGER NOT NULL,
+    smsCount INTEGER NOT NULL
+);
+
+
+
+
+
+
+
+================================
+------------Credentials---------
+===============DB=================
+IP: 192.168.10.146
+os user:postgres/cp_user_strong_password4BTRC
+DB user: postgres/cp_user_strong_password4BTRC
+DB name: cp_report

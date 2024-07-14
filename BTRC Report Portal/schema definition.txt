@@ -1,0 +1,23 @@
+const UserSchema = {
+    userId: String, // Unique
+    name: String,
+    password: String, // hashed
+    email: String, // Unique
+    phone: String, // Unique
+    address: String,
+    role: String, // Super Admin, Admin, User 
+    photo: String,
+    status: String,
+    page_access: Array,
+    created_at: Date,
+}
+
+
+
+const dashboard_tbl = {
+    date: Date,
+    clientId: String,
+    ansName: String,
+    dippingCount: Number,
+    smsCount: Number
+}

@@ -1,0 +1,28 @@
+Step:1 Add Disk
+Step:2 lsblk to get the disk name
+fdisk /dev/sdb
+n-> partition change to 8e -> p -> w
+
+Step:3 file system convert to ext4
+mkfs.ext4 /dev/sdb1
+lsblk
+
+Step:4 (LVM extension)
+LVM Extend
+1. Create a Physical Volume (PV):
+sudo pvcreate /dev/sdb1
+
+2. Extend Volume Group (VG):
+sudo vgextend ubuntu-vg /dev/sdb1
+
+3. Extend Logical Volume (LV):
+sudo lvextend -l +100%FREE /dev/ubuntu-vg/ubuntu-lv
+
+4. Resize File System:
+ext4 filesystem:
+sudo resize2fs /dev/ubuntu-vg/ubuntu-lv
+
+For XFS filesystem:
+sudo xfs_growfs /dev/ubuntu-vg/ubuntu-lv
+
+

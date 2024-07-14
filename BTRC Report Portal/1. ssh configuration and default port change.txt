@@ -1,0 +1,43 @@
+1. port change into the sshd config file:
+vi /etc/ssh/sshd_config
+	#Port 22
+	Port 8822
+
+2. Check the SSH configuration file for syntax errors:
+	sudo sshd -t
+
+3. Update SELinux Policy (in case of selinux enable)
+
+[root@appServer ~]# cat /etc/selinux/config  | grep SELINUX
+# SELINUX= can take one of these three values:
+# NOTE: Up to RHEL 8 release included, SELINUX=disabled would also
+SELINUX=enforcing
+# SELINUXTYPE= can take one of these three values:
+SELINUXTYPE=targeted
+
+If your system is running SELinux, you need to update its policy to allow the new SSH port.
+sudo dnf install policycoreutils-python-utils
+
+4. Add the new port to SELinux policy:
+sudo semanage port -a -t ssh_port_t -p tcp 8822
+
+5. Verify the SELinux policy update:
+sudo semanage port -l | grep ssh
+
+6. sudo firewall-cmd --permanent --add-port=8822/tcp
+sudo firewall-cmd --reload
+
+7. sudo systemctl restart sshd
+
+sudo systemctl status sshd
+
+8. View the detailed logs from journalctl:
+sudo journalctl -xeu sshd.service
+
+9. If required: Check for SELinux denials:
+sudo ausearch -m avc -ts recent
+
+
+
+
+
