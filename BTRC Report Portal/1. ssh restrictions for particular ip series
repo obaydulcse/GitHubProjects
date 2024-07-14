@@ -25,7 +25,7 @@ Match Address 192.168.10.0/24,192.168.30.0/24
 
 
 
-2. FW:
+2. FW: Firewall add and remove
 sudo firewall-cmd --permanent --remove-service=ssh
 sudo firewall-cmd --permanent --remove-port=22/tcp
 sudo firewall-cmd --permanent --remove-port=8822/tcp
